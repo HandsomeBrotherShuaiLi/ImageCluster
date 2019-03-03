@@ -49,16 +49,29 @@ def get_features(img_folder,Model):
     print('ALL DONE!')
 
 class ImageCluster(object):
-    def __init__(self,csv_file_path,cluster_algo='kmeans',k=None,maxK=None):
+    def __init__(self,csv_file_path,base_img_folder,resorted_img_folder,
+                 cluster_algo='kmeans',base_model='vgg16',k=None,maxK=None):
         self.csv_file=pd.read_csv(csv_file_path)
         self.cluster_algo=cluster_algo
         self.k=k
         self.maxK=maxK
+        self.base_model,self.base_model_name=Model(model_name=base_model).build_model()
+        self.base_img_folder=base_img_folder
+        self.resorted_img_folder=resorted_img_folder
     def kmeans(self):
         x=[]
         for i in self.csv_file['feature']:
             x.append([float(t) for t in i.strip('[').strip(']').split(' ')])
         x=np.array(x)
+        if os.path.exists('output'):
+            pass
+        else:
+            os.mkdir('output')
+
+        if os.path.exists('matplot'):
+            pass
+        else:
+            os.mkdir('matplot')
 
         def func(k):
             model = KMeans(n_clusters=k, init='k-means++')
@@ -77,7 +90,7 @@ class ImageCluster(object):
             import matplotlib.pyplot as plt
             plt.plot(range(2,self.maxK+1),sse,marker='o')
             plt.xlabel('number of K(cluster)')
-            plt.ylabel('sse for every K')
+            plt.ylabel('SSE Value for each K')
             plt.title('KMeans for ImageCluster')
             plt.savefig('matplot/KMeans_maxK_{}.png'.format(str(self.maxK)))
             plt.show()
@@ -90,20 +103,30 @@ class ImageCluster(object):
             print('不存在的模型，请重新输入模型名称！')
             return
 
+    def resorted_img(self,selected_k_num):
+        import shutil
+        if os.path.exists(self.resorted_img_folder):
+            pass
+        else:
+            os.mkdir(self.resorted_img_folder)
+
+        resorted_csv=pd.read_csv('output/cluster_kmeans_{}.csv'.format(str(selected_k_num)))
+        for i in resorted_csv.index:
+            filename=resorted_csv.loc[i,'filename']
+            label=resorted_csv.loc[i,'label']
+            if os.path.exists(os.path.join(self.resorted_img_folder,str(label))):
+                pass
+            else:
+                os.mkdir(os.path.join(self.resorted_img_folder,str(label)))
+            shutil.copy(filename,os.path.join(self.resorted_img_folder,str(label)))
+            print(os.path.join(self.resorted_img_folder,str(label))+' 复制成功！')
+
 if __name__=='__main__':
     c=ImageCluster(
         csv_file_path='data/VGG16_features_fixed_size.csv',
         cluster_algo='kmeans',
-        maxK=30
+        maxK=30,
+        base_img_folder='data',
+        resorted_img_folder='resorted_data',
     )
-    c.imagecluster()
-
-
-
-
-
-
-
-
-
-
+    c.resorted_img(selected_k_num=21)
