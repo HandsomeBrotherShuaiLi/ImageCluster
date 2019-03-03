@@ -67,7 +67,7 @@ class ImageCluster(object):
             f = pd.DataFrame(columns=['filename', 'label'])
             f['filename'] = self.csv_file['filename']
             f['label'] = model.labels_
-            f.to_csv('data/cluster_kmeans_{}.csv'.format(str(self.k)))
+            f.to_csv('output/cluster_kmeans_{}.csv'.format(str(k)))
             return model.inertia_
 
         if self.k==None:
