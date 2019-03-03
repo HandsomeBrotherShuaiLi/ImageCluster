@@ -4,6 +4,9 @@ from keras.applications.resnet50 import ResNet50
 from keras.applications.densenet import DenseNet121
 from keras.applications.xception import Xception
 from keras.preprocessing import image
+import os, pandas as pd
+import numpy as np
+from sklearn.cluster import KMeans
 class Model:
     def __init__(self,model_name):
         self.model=model_name
@@ -19,8 +22,6 @@ class Model:
         return VGG19(include_top=False,pooling='avg',weights='imagenet'),'VGG19'
 
 def get_features(img_folder,Model):
-    import os,pandas as pd
-    import numpy as np
     fp1=pd.DataFrame(columns=['filename','feature'])
     fp2 = pd.DataFrame(columns=['filename', 'feature'])
     for i in os.listdir(img_folder):#stage1 stage2
@@ -46,9 +47,61 @@ def get_features(img_folder,Model):
     fp1.to_csv('data/{}_features_fixed_size.csv'.format(Model[1]),index=False)
     fp2.to_csv('data/{}_features_default_size.csv'.format(Model[1]),index=False)
     print('ALL DONE!')
+
+class ImageCluster(object):
+    def __init__(self,csv_file_path,cluster_algo='kmeans',k=None,maxK=None):
+        self.csv_file=pd.read_csv(csv_file_path)
+        self.cluster_algo=cluster_algo
+        self.k=k
+        self.maxK=maxK
+    def kmeans(self):
+        x=[]
+        for i in self.csv_file['feature']:
+            x.append([float(t) for t in i.strip('[').strip(']').split(' ')])
+        x=np.array(x)
+
+        def func(k):
+            model = KMeans(n_clusters=k, init='k-means++')
+            model.fit(x)
+            print('cluster_center', model.cluster_centers_)
+            f = pd.DataFrame(columns=['filename', 'label'])
+            f['filename'] = self.csv_file['filename']
+            f['label'] = model.labels_
+            f.to_csv('data/cluster_kmeans_{}.csv'.format(str(self.k)))
+            return model.inertia_
+
+        if self.k==None:
+            sse=[]
+            for k in range(2,self.maxK+1):
+                sse.append(func(k))
+            import matplotlib.pyplot as plt
+            plt.plot(range(2,self.maxK+1),sse,marker='o')
+            plt.xlabel('number of K(cluster)')
+            plt.ylabel('sse for every K')
+            plt.title('KMeans for ImageCluster')
+            plt.savefig('matplot/KMeans_maxK_{}.png'.format(str(self.maxK)))
+            plt.show()
+        else:
+            func(self.k)
+    def imagecluster(self):
+        if self.cluster_algo.lower()=='kmeans':
+            self.kmeans()
+        else:
+            print('不存在的模型，请重新输入模型名称！')
+            return
+
 if __name__=='__main__':
-    model=Model(model_name='vgg16').build_model()
-    get_features('data',model)
+    c=ImageCluster(
+        csv_file_path='data/VGG16_features_fixed_size.csv',
+        cluster_algo='kmeans',
+        maxK=30
+    )
+    c.imagecluster()
+
+
+
+
+
 
 
 
