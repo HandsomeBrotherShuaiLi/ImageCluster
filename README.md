@@ -28,13 +28,13 @@ m=ImageCluster(
 )
 #calculate the feature maps
 m.get_feature_map(
-    resize_shape=(224,224) # (w,h)  a tuple for resizing the input images to the same shape
+    resize_shape=(224,224) # (w,h)  a tuple for resizing the input images to the same shape images
 )
 #clustering for feature maps
 m.imagecluster()
 ```
 ```
-Then, you can see the cluster sse value map, which draw a line shows each sse value for the k in range [2,maxK].  
+Then, you can see the cluster sse value map, which draws a line shows each sse value for the k in range [2,maxK].  
 Elbow criterion is applied to choose the best K for your cluster
 ```
 ![](matplot/KMeans_maxK_30.png)
@@ -51,3 +51,4 @@ m.resorted_img(
 In the end, the neatly arranged label folders and the image under these folders are shown below.  
 ```
 ![](screenshots/1.PNG)
+<div align=center><img src="screenshots/1.PNG"/></div>
