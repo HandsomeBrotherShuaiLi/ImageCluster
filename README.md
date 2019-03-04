@@ -1,4 +1,5 @@
 # ImageCluster
+![](https://img.shields.io/badge/language-python3.6-green.svg)  ![](https://img.shields.io/badge/framework-keras-good.svg)  ![](https://img.shields.io/badge/bulid-passing-red.svg)    
 The `ImageCluster` project is aimed to cluster unlabeled images based on the SOTA models.  
 It designed for engineers and students to fast feature maps and cluster the image according to your cluster-algo hyperparameter.  
 This flow contains two main steps:  
@@ -9,11 +10,11 @@ So,the data flow is shown as below
 Image->array->feature map->labeling(cluster algorithm)  
 ## Getting Started
 ### Installing
-system: win10/Ubuntu
-python:3.5+  
-Clone or download the repository  
-Commands to install requirements via Conda or pip wheels  
-`pip install -r requirements.txt`
+* system: win10/Ubuntu
+* python:3.5+  
+* Clone or download the repository  
+* Commands to install requirements via Conda or pip wheels  
+  `pip install -r requirements.txt`
 
 ### Usage
 You can import this model script to your local the same-level python scripts.  
@@ -37,18 +38,27 @@ m.imagecluster()
 Then, you can see the cluster sse value map, which draws a line shows each sse value for the k in range [2,maxK].  
 Elbow criterion is applied to choose the best K for your cluster
 ```
-![](matplot/KMeans_maxK_30.png)
-```bash
+<div align=center><img src="matplot/KMeans_maxK_30.png"/></div>
+
+```
 As we can see, 21 may be the best cluster number for this dataset.  
 So,we can call the resorted_img function to label the images under different folders
 ```
-```bash
+
+```
 m.resorted_img(
     selected_k_num=21# a int number in range[2,maxK]
 )
 ```
-```bash
+
+```
 In the end, the neatly arranged label folders and the image under these folders are shown below.  
 ```
-![](screenshots/1.PNG)
+
 <div align=center><img src="screenshots/1.PNG"/></div>
+
+## Authors
+* **Chris Li** - *all work*
+
+## License
+This project is licensed under the Apache License - see the [LICENSE](LICENSE) file for details
