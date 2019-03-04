@@ -58,6 +58,63 @@ class ImageCluster(object):
         self.base_model,self.base_model_name=Model(model_name=base_model).build_model()
         self.base_img_folder=base_img_folder
         self.resorted_img_folder=resorted_img_folder
+    def get_feature_map(self,resize_shape=None):
+        """
+        You can fix the code as your actual situation and environment!!!
+        设置图片文件夹一定是两层的，
+        base_model_folder
+            ----label
+                ----xxxxxxxx.jpg
+        :param resize_shape:
+        :return:
+        """
+        img_path_all=[]
+        f=pd.DataFrame(columns=['filename','feature'])
+        if resize_shape==None:
+            if os.path.isdir(self.base_img_folder):
+                for i in os.listdir(self.base_img_folder):
+                    next_path=os.path.join(os.path.join(self.base_img_folder,i))
+                    if os.path.isdir(next_path):
+                        for j in os.listdir(next_path):
+                            img_path = os.path.join(next_path, j)
+                            img_path_all.append(img_path)
+                            img = image.load_img(img_path, target_size=(224, 224))
+                            x = image.img_to_array(img)
+                            x = np.expand_dims(x, axis=0)
+                            features = Model[0].predict(x)[0]
+                            f = f.append({'filename': img_path, 'feature': features}, ignore_index=True)
+                    else:
+                        pass
+
+            else:
+                raise ValueError('the base image folder is wrong! PLZ check it out')
+        else:
+            if os.path.isdir(self.base_img_folder):
+                for i in os.listdir(self.base_img_folder):
+                    next_path=os.path.join(os.path.join(self.base_img_folder,i))
+                    if os.path.isdir(next_path):
+                        for j in os.listdir(next_path):
+                            img_path = os.path.join(next_path, j)
+                            img_path_all.append(img_path)
+                            img = image.load_img(img_path, target_size=resize_shape)
+                            x = image.img_to_array(img)
+                            x = np.expand_dims(x, axis=0)
+                            features = Model[0].predict(x)[0]
+                            f = f.append({'filename': img_path, 'feature': features}, ignore_index=True)
+                    else:
+                        pass
+
+            else:
+                raise ValueError('the base image folder is wrong! PLZ check it out')
+
+        if len(img_path_all)==0:
+            raise ValueError('image loading fails,please check you image path!')
+        else:
+            print('Have got the feature map for each image')
+            f.to_csv('output/base_model_{}_feature_maps.csv'.format(self.base_model_name))
+            print('output/base_model_{}_feature_maps.csv has finished!'.format(self.base_model_name))
+
+
     def kmeans(self):
         x=[]
         for i in self.csv_file['feature']:
@@ -80,7 +137,7 @@ class ImageCluster(object):
             f = pd.DataFrame(columns=['filename', 'label'])
             f['filename'] = self.csv_file['filename']
             f['label'] = model.labels_
-            f.to_csv('output/cluster_kmeans_{}.csv'.format(str(k)))
+            f.to_csv('output/base_model_{}_cluster_kmeans_{}.csv'.format(self.base_model_name,str(k)))
             return model.inertia_
 
         if self.k==None:
@@ -92,7 +149,7 @@ class ImageCluster(object):
             plt.xlabel('number of K(cluster)')
             plt.ylabel('SSE Value for each K')
             plt.title('KMeans for ImageCluster')
-            plt.savefig('matplot/KMeans_maxK_{}.png'.format(str(self.maxK)))
+            plt.savefig('matplot/base_model_{}_KMeans_maxK_{}.png'.format(self.base_model_name,str(self.maxK)))
             plt.show()
         else:
             func(self.k)
@@ -100,7 +157,7 @@ class ImageCluster(object):
         if self.cluster_algo.lower()=='kmeans':
             self.kmeans()
         else:
-            print('不存在的模型，请重新输入模型名称！')
+            print('no existing cluster algorithm')
             return
 
     def resorted_img(self,selected_k_num):
@@ -110,7 +167,7 @@ class ImageCluster(object):
         else:
             os.mkdir(self.resorted_img_folder)
 
-        resorted_csv=pd.read_csv('output/cluster_kmeans_{}.csv'.format(str(selected_k_num)))
+        resorted_csv=pd.read_csv('output/base_model_{}_cluster_kmeans_{}.csv'.format(self.base_model_name,str(selected_k_num)))
         for i in resorted_csv.index:
             filename=resorted_csv.loc[i,'filename']
             label=resorted_csv.loc[i,'label']
@@ -119,7 +176,7 @@ class ImageCluster(object):
             else:
                 os.mkdir(os.path.join(self.resorted_img_folder,str(label)))
             shutil.copy(filename,os.path.join(self.resorted_img_folder,str(label)))
-            print(os.path.join(self.resorted_img_folder,str(label))+' 复制成功！')
+            print(os.path.join(self.resorted_img_folder,str(label))+'\\'+filename+' Copied！')
 
 if __name__=='__main__':
     c=ImageCluster(
@@ -128,5 +185,8 @@ if __name__=='__main__':
         maxK=30,
         base_img_folder='data',
         resorted_img_folder='resorted_data',
+        base_model='vgg16'
     )
+    c.get_feature_map()
+    c.imagecluster()
     c.resorted_img(selected_k_num=21)
