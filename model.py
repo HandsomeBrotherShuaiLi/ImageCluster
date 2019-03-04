@@ -49,13 +49,14 @@ def get_features(img_folder,Model):
     print('ALL DONE!')
 
 class ImageCluster(object):
-    def __init__(self,csv_file_path,base_img_folder,resorted_img_folder,
-                 cluster_algo='kmeans',base_model='vgg16',k=None,maxK=None):
-        self.csv_file=pd.read_csv(csv_file_path)
+    def __init__(self,base_img_folder,resorted_img_folder,
+                 cluster_algo='kmeans',base_model='vgg16',k=None,maxK=None,csv_file_path=None):
+        self.base_model, self.base_model_name = Model(model_name=base_model).build_model()
+        self.csv_file_path=csv_file_path
         self.cluster_algo=cluster_algo
         self.k=k
         self.maxK=maxK
-        self.base_model,self.base_model_name=Model(model_name=base_model).build_model()
+
         self.base_img_folder=base_img_folder
         self.resorted_img_folder=resorted_img_folder
     def get_feature_map(self,resize_shape=None):
@@ -117,6 +118,10 @@ class ImageCluster(object):
 
     def kmeans(self):
         x=[]
+        if self.csv_file_path == None:
+            self.csv_file = pd.read_csv('output/base_model_{}_feature_maps.csv'.format(self.base_model_name))
+        else:
+            self.csv_file = pd.read_csv(self.csv_file_path)
         for i in self.csv_file['feature']:
             x.append([float(t) for t in i.strip('[').strip(']').split(' ')])
         x=np.array(x)
