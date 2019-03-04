@@ -1,5 +1,5 @@
 # ImageCluster
-![](https://img.shields.io/badge/language-python3.6-green.svg)  ![](https://img.shields.io/badge/framework-keras-good.svg)  ![](https://img.shields.io/badge/bulid-passing-red.svg)    
+![](https://img.shields.io/badge/language-python3.6-green.svg)  ![](https://img.shields.io/badge/framework-keras-good.svg)  ![](https://img.shields.io/badge/bulid-passing-red.svg)  ![](https://img.shields.io/badge/author-Chris_Li-black.svg)     
 The `ImageCluster` project is aimed to cluster unlabeled images based on the SOTA models.  
 It designed for engineers and students to fast feature maps and cluster the image according to your cluster-algo hyperparameter.  
 This flow contains two main steps:  
