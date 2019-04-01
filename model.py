@@ -82,7 +82,7 @@ class ImageCluster(object):
                             img = image.load_img(img_path, target_size=(224, 224))
                             x = image.img_to_array(img)
                             x = np.expand_dims(x, axis=0)
-                            features = Model[0].predict(x)[0]
+                            features = self.base_model.predict(x)[0]
                             f = f.append({'filename': img_path, 'feature': features}, ignore_index=True)
                     else:
                         pass
@@ -100,7 +100,7 @@ class ImageCluster(object):
                             img = image.load_img(img_path, target_size=resize_shape)
                             x = image.img_to_array(img)
                             x = np.expand_dims(x, axis=0)
-                            features = Model[0].predict(x)[0]
+                            features = self.base_model.predict(x)[0]
                             f = f.append({'filename': img_path, 'feature': features}, ignore_index=True)
                     else:
                         pass
@@ -182,16 +182,3 @@ class ImageCluster(object):
                 os.mkdir(os.path.join(self.resorted_img_folder,str(label)))
             shutil.copy(filename,os.path.join(self.resorted_img_folder,str(label)))
             print(os.path.join(self.resorted_img_folder,str(label))+'\\'+filename+' Copied！')
-
-if __name__=='__main__':
-    c=ImageCluster(
-        csv_file_path='data/VGG16_features_fixed_size.csv',
-        cluster_algo='kmeans',
-        maxK=30,
-        base_img_folder='data',
-        resorted_img_folder='resorted_data',
-        base_model='vgg16'
-    )
-    c.get_feature_map()
-    c.imagecluster()
-    c.resorted_img(selected_k_num=21)
