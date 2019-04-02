@@ -1,4 +1,4 @@
-from tensorflow.keras.layers import Dropout,Dense,Conv2D,GlobalAveragePooling2D
+from tensorflow.keras.layers import Dropout,Dense,Conv2D,GlobalAveragePooling2D,Flatten
 from tensorflow.keras import Model
 from tensorflow.keras.applications import VGG16,VGG19,ResNet50,InceptionResNetV2,DenseNet121
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -18,7 +18,7 @@ class classifier(object):
         if self.base_model.lower()=='vgg16':
             base_model=VGG16(weights='imagenet',include_top=False,input_shape=self.img_shape)
             input_layer=base_model.input
-            layer=base_model.get_layer('block5_conv3').output
+            layer=base_model.get_layer('block5_pool').output
         elif self.base_model.lower()=='vgg19':
             base_model=VGG19(weights='imagenet',include_top=False,input_shape=self.img_shape)
             input_layer = base_model.input
@@ -35,24 +35,15 @@ class classifier(object):
             base_model = DenseNet121(weights='imagenet', include_top=False, input_shape=self.img_shape)
             input_layer = base_model.input
             layer = base_model.output
-        # layer=GlobalAveragePooling2D()(layer)
-        layer=Conv2D(1024,(1,1),padding='same',activation='relu',kernel_initializer='he_normal')(layer)
-        # layer=Dense(512,activation='relu',kernel_initializer='he_normal')(layer)
-        # layer=Dropout(0.5)(layer)
-        # layer = Dense(128, activation='relu', kernel_initializer='he_normal')(layer)
-        # layer = Dropout(0.5)(layer)
-        # layer = Dense(64, activation='relu', kernel_initializer='he_normal')(layer)
-        # layer = Dropout(0.5)(layer)
-        # layer = Dense(32, activation='relu', kernel_initializer='he_normal')(layer)
-        # layer = Dropout(0.5)(layer)
-        layer = GlobalAveragePooling2D()(layer)
-        prediction =Dense(self.cls_num,activation='softmax',kernel_initializer='he_normal')(layer)
-
+        layer=Flatten()(layer)
+        layer=Dense(4096, activation='relu', name='fc1',kernel_initializer='he_normal')(layer)
+        layer=Dense(4096, activation='relu', name='fc2',kernel_initializer='he_normal')(layer)
+        prediction=Dense(self.cls_num,activation='softmax', name='predictions')(layer)
         model=Model(input_layer,prediction)
         for layer in base_model.layers:
             layer.trainable=False
 
-        model_finetune=Model(input_layer,prediction)
+        model_finetune = Model(input_layer,prediction)
         for layer in base_model.layers:
             layer.trainable=True
 
@@ -80,19 +71,19 @@ class classifier(object):
         )
         model,model_finetune=self.model()
         optimizer=SGD(lr=0.001,momentum=0.9,decay=1e-6,nesterov=True) if opt=='sgd' else Adam(lr=0.001)
-        model.compile(
+        model_finetune.compile(
             optimizer=optimizer,
             loss='categorical_crossentropy',
             metrics=['acc']
         )
-        model.summary()
+        model_finetune.summary()
         tb=TensorBoard(log_dir='logs',batch_size=self.batch_size)
         es=EarlyStopping(monitor='val_loss',patience=10,verbose=1,min_delta=0.0001)
-        cp=ModelCheckpoint(filepath=os.path.join('model','cls--epoch_{epoch:02d}--val_loss_{val_loss:.5f}--val_acc_{val_acc:.5f}--train_loss_{loss:.5f}--train_acc_{acc:.5f}.hdf5'),
+        cp=ModelCheckpoint(filepath=os.path.join('model','top_cls--epoch_{epoch:02d}--val_loss_{val_loss:.5f}--val_acc_{val_acc:.5f}--train_loss_{loss:.5f}--train_acc_{acc:.5f}.hdf5'),
                            monitor='val_loss', save_best_only=False,save_weights_only=False,
                            verbose=1, mode='min', period=1)
         lr=ReduceLROnPlateau(monitor='val_loss',patience=3,verbose=1)
-        his=model.fit_generator(
+        his=model_finetune.fit_generator(
             generator=train_data,
             steps_per_epoch=train_data.samples//self.batch_size,
             validation_data=val_data,
@@ -113,18 +104,4 @@ if __name__=='__main__':
         img_shape=(256,256,3),
         cls_num=21
     )
-    model.train(initial_epoch=0,epochs=50,opt='adam')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    model.train(initial_epoch=0,epochs=100,opt='sgd')
