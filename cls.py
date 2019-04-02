@@ -86,7 +86,7 @@ class classifier(object):
             class_mode='categorical',
             subset='validation'
         )
-        model,model_finetune=self.model()
+        model_finetune=self.model()
         optimizer=SGD(lr=0.001,momentum=0.9,decay=1e-6,nesterov=True) if opt=='sgd' else Adam(lr=0.001)
         model_finetune.compile(
             optimizer=optimizer,
