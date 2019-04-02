@@ -1,6 +1,6 @@
-from tensorflow.keras.layers import Dropout,Dense,Conv2D,GlobalAveragePooling2D,Flatten
+from tensorflow.keras.layers import Dropout,Dense,Conv2D,GlobalAveragePooling2D,Flatten,Reshape,Activation
 from tensorflow.keras import Model
-from tensorflow.keras.applications import VGG16,VGG19,ResNet50,InceptionResNetV2,DenseNet121
+from tensorflow.keras.applications import VGG16,VGG19,ResNet50,InceptionResNetV2,DenseNet121,MobileNet
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.callbacks import TensorBoard,ReduceLROnPlateau,ModelCheckpoint,EarlyStopping
 from tensorflow.keras.optimizers import SGD,Adam
@@ -31,23 +31,40 @@ class classifier(object):
             base_model = InceptionResNetV2(weights='imagenet', include_top=False, input_shape=self.img_shape)
             input_layer = base_model.input
             layer = base_model.output
+        elif self.base_model.lower()=='mobilenet':
+            base_model=MobileNet(weights='imagenet', include_top=False, input_shape=self.img_shape,pooling='avg')
+            input_layer=base_model.input
+            layer=base_model.output
         else:
             base_model = DenseNet121(weights='imagenet', include_top=False, input_shape=self.img_shape)
             input_layer = base_model.input
             layer = base_model.output
-        layer=Flatten()(layer)
-        layer=Dense(4096, activation='relu', name='fc1',kernel_initializer='he_normal')(layer)
-        layer=Dense(4096, activation='relu', name='fc2',kernel_initializer='he_normal')(layer)
-        prediction=Dense(self.cls_num,activation='softmax', name='predictions')(layer)
-        model=Model(input_layer,prediction)
-        for layer in base_model.layers:
-            layer.trainable=False
+        if self.base_model.lower()=='vgg16':
+            layer = Flatten()(layer)
+            layer = Dense(4096, activation='relu', name='fc1', kernel_initializer='he_normal')(layer)
+            layer = Dense(4096, activation='relu', name='fc2', kernel_initializer='he_normal')(layer)
+            prediction = Dense(self.cls_num, activation='softmax', name='predictions')(layer)
+        elif self.base_model.lower()=='mobilenet':
+            # layer=GlobalAveragePooling2D()(layer)
+            layer=Reshape((1,1,1024),name='reshape_1')(layer)
+            layer=Dropout(1e-3)(layer)
+            layer=Conv2D(self.cls_num, (1, 1),
+                              padding='same',
+                              name='conv_preds')(layer)
+            layer=Activation('softmax')(layer)
+            prediction=Reshape((self.cls_num,))(layer)
+        else:
+            layer = Flatten()(layer)
+            layer = Dense(4096, activation='relu', name='fc1', kernel_initializer='he_normal')(layer)
+            layer = Dense(4096, activation='relu', name='fc2', kernel_initializer='he_normal')(layer)
+            prediction = Dense(self.cls_num, activation='softmax', name='predictions')(layer)
 
-        model_finetune = Model(input_layer,prediction)
+
         for layer in base_model.layers:
             layer.trainable=True
+        model_finetune = Model(input_layer, prediction)
 
-        return model,model_finetune
+        return model_finetune
     def train(self,initial_epoch=0,epochs=20,opt='sgd'):
         gen=ImageDataGenerator(
             rotation_range=360,horizontal_flip=True,vertical_flip=True,
@@ -79,7 +96,7 @@ class classifier(object):
         model_finetune.summary()
         tb=TensorBoard(log_dir='logs',batch_size=self.batch_size)
         es=EarlyStopping(monitor='val_loss',patience=10,verbose=1,min_delta=0.0001)
-        cp=ModelCheckpoint(filepath=os.path.join('model','top_cls--epoch_{epoch:02d}--val_loss_{val_loss:.5f}--val_acc_{val_acc:.5f}--train_loss_{loss:.5f}--train_acc_{acc:.5f}.hdf5'),
+        cp=ModelCheckpoint(filepath=os.path.join('model','mobilenet_cls--epoch_{epoch:02d}--val_loss_{val_loss:.5f}--val_acc_{val_acc:.5f}--train_loss_{loss:.5f}--train_acc_{acc:.5f}.hdf5'),
                            monitor='val_loss', save_best_only=False,save_weights_only=False,
                            verbose=1, mode='min', period=1)
         lr=ReduceLROnPlateau(monitor='val_loss',patience=3,verbose=1)
@@ -97,11 +114,11 @@ class classifier(object):
 if __name__=='__main__':
     model=classifier(
         img_dir='resorted_data',
-        split_radio=0.2,
+        split_radio=0.1,
         batch_size=19,
-        val_batch_size=19,
-        base_model='vgg16',
-        img_shape=(256,256,3),
+        val_batch_size=39,
+        base_model='mobilenet',
+        img_shape=(224,224,3),
         cls_num=21
     )
-    model.train(initial_epoch=0,epochs=100,opt='sgd')
+    model.train(initial_epoch=0,epochs=100,opt='adam')
