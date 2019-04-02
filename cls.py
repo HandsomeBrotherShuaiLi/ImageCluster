@@ -14,7 +14,7 @@ class classifier(object):
         self.batch_size=batch_size if self.img_shape!=(None,None,3) else 1
         self.val_batch_size=val_batch_size if self.img_shape!=(None,None,3) else 1
         self.cls_num=cls_num
-    def model(self):
+    def model(self,freeze=True):
         if self.base_model.lower()=='vgg16':
             base_model=VGG16(weights='imagenet',include_top=False,input_shape=self.img_shape)
             input_layer=base_model.input
@@ -42,7 +42,9 @@ class classifier(object):
         if self.base_model.lower()=='vgg16':
             layer = Flatten()(layer)
             layer = Dense(4096, activation='relu', name='fc1', kernel_initializer='he_normal')(layer)
+            layer = Dropout(0.5)(layer)
             layer = Dense(4096, activation='relu', name='fc2', kernel_initializer='he_normal')(layer)
+            layer = Dropout(0.5)(layer)
             prediction = Dense(self.cls_num, activation='softmax', name='predictions')(layer)
         elif self.base_model.lower()=='mobilenet':
             # layer=GlobalAveragePooling2D()(layer)
@@ -56,18 +58,24 @@ class classifier(object):
         else:
             layer = Flatten()(layer)
             layer = Dense(4096, activation='relu', name='fc1', kernel_initializer='he_normal')(layer)
+            layer=Dropout(0.5)(layer)
             layer = Dense(4096, activation='relu', name='fc2', kernel_initializer='he_normal')(layer)
+            layer = Dropout(0.5)(layer)
             prediction = Dense(self.cls_num, activation='softmax', name='predictions')(layer)
 
+        if freeze==True:
+            for layer in base_model.layers:
+                layer.trainable=False
+        else:
+            for layer in base_model.layers:
+                layer.trainable=True
 
-        for layer in base_model.layers:
-            layer.trainable=True
         model_finetune = Model(input_layer, prediction)
 
         return model_finetune
     def train(self,initial_epoch=0,epochs=20,opt='sgd'):
         gen=ImageDataGenerator(
-            rotation_range=360,horizontal_flip=True,vertical_flip=True,
+            rotation_range=180,horizontal_flip=True,vertical_flip=True,shear_range=0.2,zoom_range=0.2,
             rescale=1/255,validation_split=self.split_radio
         )
         train_data = gen.flow_from_directory(
@@ -86,8 +94,8 @@ class classifier(object):
             class_mode='categorical',
             subset='validation'
         )
-        model_finetune=self.model()
-        optimizer=SGD(lr=0.001,momentum=0.9,decay=1e-6,nesterov=True) if opt=='sgd' else Adam(lr=0.001)
+        model_finetune=self.model(freeze=True)
+        optimizer=SGD(lr=1e-4,momentum=0.9) if opt=='sgd' else Adam(lr=0.001)
         model_finetune.compile(
             optimizer=optimizer,
             loss='categorical_crossentropy',
@@ -117,8 +125,8 @@ if __name__=='__main__':
         split_radio=0.1,
         batch_size=19,
         val_batch_size=39,
-        base_model='mobilenet',
+        base_model='vgg16',
         img_shape=(224,224,3),
         cls_num=21
     )
-    model.train(initial_epoch=0,epochs=100,opt='adam')
+    model.train(initial_epoch=0,epochs=100,opt='sgd')
