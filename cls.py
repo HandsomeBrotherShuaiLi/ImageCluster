@@ -1,6 +1,6 @@
 from tensorflow.keras.layers import Dropout,Dense,Conv2D,GlobalAveragePooling2D,Flatten,Reshape,Activation
 from tensorflow.keras import Model
-from tensorflow.keras.applications import VGG16,VGG19,ResNet50,InceptionResNetV2,DenseNet121,MobileNet
+from tensorflow.keras.applications import VGG16,VGG19,ResNet50,InceptionResNetV2,DenseNet121,MobileNet,NASNetLarge
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.callbacks import TensorBoard,ReduceLROnPlateau,ModelCheckpoint,EarlyStopping
 from tensorflow.keras.optimizers import SGD,Adam
@@ -95,7 +95,7 @@ class classifier(object):
             subset='validation'
         )
         model_finetune=self.model(freeze=True)
-        optimizer=SGD(lr=1e-4,momentum=0.9) if opt=='sgd' else Adam(lr=0.001)
+        optimizer=SGD(lr=1e-4,momentum=0.9,nesterov=True) if opt=='sgd' else Adam(lr=0.001)
         model_finetune.compile(
             optimizer=optimizer,
             loss='categorical_crossentropy',
@@ -104,7 +104,7 @@ class classifier(object):
         model_finetune.summary()
         tb=TensorBoard(log_dir='logs',batch_size=self.batch_size)
         es=EarlyStopping(monitor='val_loss',patience=10,verbose=1,min_delta=0.0001)
-        cp=ModelCheckpoint(filepath=os.path.join('model','mobilenet_cls--epoch_{epoch:02d}--val_loss_{val_loss:.5f}--val_acc_{val_acc:.5f}--train_loss_{loss:.5f}--train_acc_{acc:.5f}.hdf5'),
+        cp=ModelCheckpoint(filepath=os.path.join('model','vgg16_cls--epoch_{epoch:02d}--val_loss_{val_loss:.5f}--val_acc_{val_acc:.5f}--train_loss_{loss:.5f}--train_acc_{acc:.5f}.hdf5'),
                            monitor='val_loss', save_best_only=False,save_weights_only=False,
                            verbose=1, mode='min', period=1)
         lr=ReduceLROnPlateau(monitor='val_loss',patience=3,verbose=1)
@@ -124,7 +124,7 @@ if __name__=='__main__':
         img_dir='resorted_data',
         split_radio=0.1,
         batch_size=19,
-        val_batch_size=39,
+        val_batch_size=19,
         base_model='vgg16',
         img_shape=(224,224,3),
         cls_num=21

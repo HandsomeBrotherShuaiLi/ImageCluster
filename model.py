@@ -62,7 +62,7 @@ class ImageCluster(object):
     def get_feature_map(self,resize_shape=None):
         """
         You can fix the code as your actual situation and environment!!!
-        设置图片文件夹一定是两层的，
+        设置图片文件夹一定是3层的，
         base_model_folder
             ----label
                 ----xxxxxxxx.jpg
@@ -77,13 +77,15 @@ class ImageCluster(object):
                     next_path=os.path.join(os.path.join(self.base_img_folder,i))
                     if os.path.isdir(next_path):
                         for j in os.listdir(next_path):
-                            img_path = os.path.join(next_path, j)
-                            img_path_all.append(img_path)
-                            img = image.load_img(img_path, target_size=(224, 224))
-                            x = image.img_to_array(img)
-                            x = np.expand_dims(x, axis=0)
-                            features = self.base_model.predict(x)[0]
-                            f = f.append({'filename': img_path, 'feature': features}, ignore_index=True)
+                            last_path = os.path.join(next_path, j)
+                            for w in os.listdir(last_path):
+                                img_path = os.path.join(last_path, w)
+                                img_path_all.append(img_path)
+                                img = image.load_img(img_path, target_size=resize_shape)
+                                x = image.img_to_array(img)
+                                x = np.expand_dims(x, axis=0)
+                                features = self.base_model.predict(x)[0]
+                                f = f.append({'filename': img_path, 'feature': features}, ignore_index=True)
                     else:
                         pass
 
@@ -95,13 +97,18 @@ class ImageCluster(object):
                     next_path=os.path.join(os.path.join(self.base_img_folder,i))
                     if os.path.isdir(next_path):
                         for j in os.listdir(next_path):
-                            img_path = os.path.join(next_path, j)
-                            img_path_all.append(img_path)
-                            img = image.load_img(img_path, target_size=resize_shape)
-                            x = image.img_to_array(img)
-                            x = np.expand_dims(x, axis=0)
-                            features = self.base_model.predict(x)[0]
-                            f = f.append({'filename': img_path, 'feature': features}, ignore_index=True)
+                            last_path = os.path.join(next_path, j)
+                            for w in os.listdir(last_path):
+                                img_path=os.path.join(last_path,w)
+                                img_path_all.append(img_path)
+                                img = image.load_img(img_path, target_size=resize_shape)
+                                x = image.img_to_array(img)
+                                x = np.expand_dims(x, axis=0)
+                                features = self.base_model.predict(x)[0]
+                                f = f.append({'filename': img_path, 'feature': features}, ignore_index=True)
+                                print(img_path,' extracted features')
+
+
                     else:
                         pass
 
