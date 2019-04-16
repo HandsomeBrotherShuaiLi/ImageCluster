@@ -1,6 +1,6 @@
 from tensorflow.keras.layers import Dropout,Dense,Conv2D,GlobalAveragePooling2D,Flatten,Reshape,Activation
 from tensorflow.keras import Model
-from tensorflow.keras.applications import VGG16,VGG19,ResNet50,InceptionResNetV2,DenseNet121,MobileNet,NASNetLarge
+from tensorflow.keras.applications import VGG16,VGG19,ResNet50,InceptionResNetV2,DenseNet121,MobileNet
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.callbacks import TensorBoard,ReduceLROnPlateau,ModelCheckpoint,EarlyStopping
 from tensorflow.keras.optimizers import SGD,Adam
@@ -55,14 +55,12 @@ class classifier(object):
                               name='conv_preds')(layer)
             layer=Activation('softmax')(layer)
             prediction=Reshape((self.cls_num,))(layer)
-        else:
-            layer = Flatten()(layer)
-            layer = Dense(4096, activation='relu', name='fc1', kernel_initializer='he_normal')(layer)
-            layer=Dropout(0.5)(layer)
-            layer = Dense(4096, activation='relu', name='fc2', kernel_initializer='he_normal')(layer)
-            layer = Dropout(0.5)(layer)
+        elif self.base_model.lower()=='resnet50':
+            layer=GlobalAveragePooling2D()(layer)
             prediction = Dense(self.cls_num, activation='softmax', name='predictions')(layer)
-
+        else:
+            layer = GlobalAveragePooling2D()(layer)
+            prediction = Dense(self.cls_num, activation='softmax', name='predictions')(layer)
         if freeze==True:
             for layer in base_model.layers:
                 layer.trainable=False
@@ -75,7 +73,7 @@ class classifier(object):
         return model_finetune
     def train(self,initial_epoch=0,epochs=20,opt='sgd'):
         gen=ImageDataGenerator(
-            rotation_range=180,horizontal_flip=True,vertical_flip=True,shear_range=0.2,zoom_range=0.2,
+            rotation_range=360,horizontal_flip=True,vertical_flip=True,shear_range=0.2,zoom_range=0.2,
             rescale=1/255,validation_split=self.split_radio
         )
         train_data = gen.flow_from_directory(
@@ -94,8 +92,8 @@ class classifier(object):
             class_mode='categorical',
             subset='validation'
         )
-        model_finetune=self.model(freeze=True)
-        optimizer=SGD(lr=1e-4,momentum=0.9,nesterov=True) if opt=='sgd' else Adam(lr=0.001)
+        model_finetune=self.model(freeze=False)
+        optimizer=SGD(lr=1e-3,momentum=0.9,nesterov=True) if opt=='sgd' else Adam(lr=0.0001)
         model_finetune.compile(
             optimizer=optimizer,
             loss='categorical_crossentropy',
@@ -103,11 +101,11 @@ class classifier(object):
         )
         model_finetune.summary()
         tb=TensorBoard(log_dir='logs',batch_size=self.batch_size)
-        es=EarlyStopping(monitor='val_loss',patience=10,verbose=1,min_delta=0.0001)
-        cp=ModelCheckpoint(filepath=os.path.join('model','vgg16_cls--epoch_{epoch:02d}--val_loss_{val_loss:.5f}--val_acc_{val_acc:.5f}--train_loss_{loss:.5f}--train_acc_{acc:.5f}.hdf5'),
-                           monitor='val_loss', save_best_only=True,save_weights_only=False,
-                           verbose=1, mode='min', period=1)
-        lr=ReduceLROnPlateau(monitor='val_loss',patience=3,verbose=1)
+        es=EarlyStopping(monitor='val_acc',patience=15,verbose=1,min_delta=0.0001)
+        cp=ModelCheckpoint(filepath=os.path.join('model','freeze_vgg16_cls--epoch_{epoch:02d}--val_loss_{val_loss:.5f}--val_acc_{val_acc:.5f}--train_loss_{loss:.5f}--train_acc_{acc:.5f}.hdf5'),
+                           monitor='val_acc', save_best_only=True,save_weights_only=True,
+                           verbose=1,  period=1)
+        lr=ReduceLROnPlateau(monitor='val_acc',patience=5,verbose=1)
         his=model_finetune.fit_generator(
             generator=train_data,
             steps_per_epoch=train_data.samples//self.batch_size,
@@ -121,12 +119,12 @@ class classifier(object):
 
 if __name__=='__main__':
     model=classifier(
-        img_dir='resorted_data',
+        img_dir='train_data_2',
         split_radio=0.1,
         batch_size=19,
         val_batch_size=19,
         base_model='vgg16',
         img_shape=(224,224,3),
-        cls_num=21
+        cls_num=77
     )
     model.train(initial_epoch=0,epochs=100,opt='sgd')
