@@ -145,7 +145,7 @@ class ImageCluster(object):
         def func(k):
             model = KMeans(n_clusters=k, init='k-means++')
             model.fit(x)
-            print('cluster_center', model.cluster_centers_)
+            # print('cluster_center', model.cluster_centers_)
             f = pd.DataFrame(columns=['filename', 'label'])
             f['filename'] = self.csv_file['filename']
             f['label'] = model.labels_
@@ -154,7 +154,7 @@ class ImageCluster(object):
 
         if self.k==None:
             sse=[]
-            for k in range(2,self.maxK+1):
+            for k in range(51,self.maxK+1):
                 sse.append(func(k))
             import matplotlib.pyplot as plt
             plt.plot(range(2,self.maxK+1),sse,marker='o')

@@ -105,7 +105,7 @@ class classifier(object):
         tb=TensorBoard(log_dir='logs',batch_size=self.batch_size)
         es=EarlyStopping(monitor='val_loss',patience=10,verbose=1,min_delta=0.0001)
         cp=ModelCheckpoint(filepath=os.path.join('model','vgg16_cls--epoch_{epoch:02d}--val_loss_{val_loss:.5f}--val_acc_{val_acc:.5f}--train_loss_{loss:.5f}--train_acc_{acc:.5f}.hdf5'),
-                           monitor='val_loss', save_best_only=False,save_weights_only=False,
+                           monitor='val_loss', save_best_only=True,save_weights_only=False,
                            verbose=1, mode='min', period=1)
         lr=ReduceLROnPlateau(monitor='val_loss',patience=3,verbose=1)
         his=model_finetune.fit_generator(
